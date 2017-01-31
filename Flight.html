@@ -1,0 +1,132 @@
+<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>Flight </title>
+<meta charset="utf-8"> 
+</head>
+
+    
+<script id="shader-vs" type="x-shader/x-vertex">
+   attribute vec3 aVertexNormal;
+   attribute vec3 aVertexPosition;
+   attribute vec4 aVertexColor;
+
+   
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat3 uNMatrix;
+    uniform vec3 uLightPosition;
+    uniform vec3 uAmbientLightColor;
+    uniform vec3 uDiffuseLightColor;
+    uniform vec3 uSpecularLightColor;
+    
+    const float shininess = 320.0;
+    
+    varying vec4 vColor;
+    ///////////////// set color function
+    //input: height
+    //output: vector with gdb color
+    vec3 setColor(float height){
+        vec3 colors;
+        if(height<0.2){
+            colors = vec3(-5.5, 20, 9.6);
+        }
+        else if(height>=0.2 && height <0.3){
+            colors = vec3(0.0, 1.8, 0.3);
+        }
+        else if(height>=0.3&& height<0.4){
+            colors = vec3(0.7, 1.5, 0.4);
+        }
+        else if(height>=0.4&& height<0.5){
+            colors = vec3(0.7, 0.4, 0.4);
+        }
+        else if(height>=0.5&& height<0.6){
+            colors = vec3(0.7, 1.5, 0.9);
+        }
+        else if(height>=0.6&& height<0.7){
+            colors = vec3(0.3, 1.5, 0.67);
+        }
+        else if(height>=0.7&& height<0.8){
+            colors = vec3(0.7, 0.5, 0.4);
+        }
+        else if(height>0.7&& height<0.5){
+            colors = vec3(0.6, 1.0, 0.4);
+        }
+        else{
+            colors = vec3(0,0,1);
+        }
+        return colors;
+    }
+    
+    void main(void) {
+
+    vec3 uMat = setColor(aVertexPosition.z);
+    
+    // Get the vertex position in eye coordinates
+    vec4 vertexPositionEye4 = uMVMatrix * vec4(aVertexPosition, 1.0);
+    vec3 vertexPositionEye3 = vertexPositionEye4.xyz / vertexPositionEye4.w;
+  
+    // Calculate the vector (l) to the light source
+    vec3 vectorToLightSource = normalize(uLightPosition - vertexPositionEye3);
+    
+    // Transform the normal (n) to eye coordinates
+    vec3 normalEye = normalize(uNMatrix * aVertexNormal);
+    
+    // Calculate n dot l for diffuse lighting
+    float diffuseLightWeightning = max(dot(normalEye, 
+                                    vectorToLightSource), 0.0);
+                                       
+    // Calculate the reflection vector (r) that is needed for specular light
+    vec3 reflectionVector = normalize(reflect(-vectorToLightSource, 
+                                             normalEye));
+    
+    // The camera in eye coordinates is located in the origin and is pointing
+    // along the negative z-axis. Calculate viewVector (v) 
+    // in eye coordinates as:
+    // (0.0, 0.0, 0.0) - vertexPositionEye3
+    vec3 viewVectorEye = -normalize(vertexPositionEye3);
+    
+    float rdotv = max(dot(reflectionVector, viewVectorEye), 0.0);
+    
+    float specularLightWeightning = pow(rdotv, shininess);
+    // Sum up all three reflection components and send to the fragment shader
+    vColor = vec4((uAmbientLightColor * uMat
+                + uDiffuseLightColor * diffuseLightWeightning
+                + uSpecularLightColor * specularLightWeightning),1.0);
+        gl_Position = uPMatrix*uMVMatrix*vec4(aVertexPosition, 1.0);
+        //vColor = aVertexColor;
+    }
+</script>
+  
+<script id="shader-fs" type="x-shader/x-fragment">
+precision mediump float;
+varying vec4 vColor;
+void main(void) {
+        gl_FragColor = vColor;
+ }
+</script>
+
+<script src="gl-matrix-min.js"></script> 
+<script src="webgl-utils.js"></script>
+<script src="simpleModeling.js"></script>   
+<script src="terrainModeling.js"></script>  
+<script src="HelloTerrain.js"></script> 
+<body onload="startup();">
+<h1 style="color:black">418 Flight Simulator!</h1>
+<h2 style="color:blue">Controls: </h2>
+<h2 style="color:blue">Up/Down/Left/Right arrow keys will roll/pitch respectively. </h2>
+<h2 style="color:blue">A: turn to the felt, D: turn to the right.</h2>
+<h2 style="color:blue">S: speed up, X: speed down. Have fun!</h2>
+ <canvas id="myGLCanvas" width="1000" height="1000"></canvas>
+    <form id="input_form">
+        <fieldset>
+            <legend>Rendering Parameters</legend>
+         <input type="radio" name="primitive" id="wireframe" value="wireframe"> Wireframe
+         <input type="radio" name="primitive" id="polygon" id="polygon" value="polygon"> Polygon
+         <input type="radio" name="primitive" id="wirepoly" value="wirepoly" checked > Polygon with Edges  
+
+        </fieldset>
+        </form>
+</body>
+
+</html>
